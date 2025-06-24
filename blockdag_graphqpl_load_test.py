@@ -1,10 +1,20 @@
 from locust import HttpUser, task, between
 
 class GraphQLUser(HttpUser):
-    
     host = "http://localhost:8000"
     wait_time = between(0.5, 1.5)
-    
+    graphql_endpoint = "/subgraphs/name/erc20"
+    headers = {"Content-Type": "application/json"}
+
+    def post_graphql_query(self, query: str, request_name: str):
+        self.client.post(
+            self.graphql_endpoint,
+            json={"query": query},
+            headers=self.headers,
+            name=request_name
+        )
+
+    # Task weight: 1
     @task(1)
     def get_token_information(self):
         query = """
@@ -18,13 +28,9 @@ class GraphQLUser(HttpUser):
           }
         }
         """
-        self.client.post(
-            "/subgraphs/name/erc20",
-            json={"query": query},
-            headers={"Content-Type": "application/json"},
-            name="(1) Token Information"  # Unique name for reporting
-        )
-    
+        self.post_graphql_query(query, "(1) Token Information")
+
+    # Task weight: 2
     @task(2)
     def get_account_balances(self):
         query = """
@@ -41,13 +47,9 @@ class GraphQLUser(HttpUser):
           }
         }
         """
-        self.client.post(
-            "/subgraphs/name/erc20",
-            json={"query": query},
-            headers={"Content-Type": "application/json"},
-            name="(2) Account Balances"  # Unique name for reporting
-        )
-    
+        self.post_graphql_query(query, "(2) Account Balances")
+
+    # Task weight: 3
     @task(3)
     def get_transfer_history(self):
         query = """
@@ -65,9 +67,4 @@ class GraphQLUser(HttpUser):
           }
         }
         """
-        self.client.post(
-            "/subgraphs/name/erc20",
-            json={"query": query},
-            headers={"Content-Type": "application/json"},
-            name="(3) Transfer History"  # Unique name for reporting
-        )
+        self.post_graphql_query(query, "(3) Transfer History")
